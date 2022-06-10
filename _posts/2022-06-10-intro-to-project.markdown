@@ -136,7 +136,7 @@ And finally, as mentioned above, the experience I will have gained in implementi
 these AuxReaders should be very helpful in writing detailed documentation and a guide
 on how to write additional AuxReaders, helping to make the aux system find more use.
 
-# timeline
+# Timeline
 I will be working part-time on this project for a duration of 14 weeks. At the end
 of week 6, so roughly in mid- to late-July, I hope to have finished all work on the
 EDRReader. Every reader after this one should take less work, and I should be faster, so
