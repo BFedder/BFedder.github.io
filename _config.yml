@@ -18,11 +18,11 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: Energy Readers for MDAnalysis
+title: Bjarne's blog
 email: bjarnefeddersen@gmx.net
 description: >- # this means to ignore newlines until "baseurl:"
   This blog is a chronicle of my contribution to MDAnalysis as part of
-  the Google Summer of Code   2022.
+  the Google Summer of Code 2022.
 baseurl: "" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
 #twitter_username:

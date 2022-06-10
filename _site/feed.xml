@@ -1,4 +1,140 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="http://localhost:4001/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4001/" rel="alternate" type="text/html" /><updated>2022-05-26T17:03:07+01:00</updated><id>http://localhost:4001/feed.xml</id><title type="html">Energy Readers for MDAnalysis</title><subtitle>This blog is a chronicle of my contribution to MDAnalysis as part of the Google Summer of Code   2022.</subtitle><entry><title type="html">Welcome!</title><link href="http://localhost:4001/jekyll/update/2022/05/26/welcome-to-blog.html" rel="alternate" type="text/html" title="Welcome!" /><published>2022-05-26T16:00:00+01:00</published><updated>2022-05-26T16:00:00+01:00</updated><id>http://localhost:4001/jekyll/update/2022/05/26/welcome-to-blog</id><content type="html" xml:base="http://localhost:4001/jekyll/update/2022/05/26/welcome-to-blog.html">&lt;p&gt;Hello and welcome to my blog!&lt;/p&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="http://localhost:4001/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4001/" rel="alternate" type="text/html" /><updated>2022-06-10T20:42:43+01:00</updated><id>http://localhost:4001/feed.xml</id><title type="html">Bjarne’s blog</title><subtitle>This blog is a chronicle of my contribution to MDAnalysis as part of the Google Summer of Code 2022.</subtitle><entry><title type="html">New AuxReaders! But why?</title><link href="http://localhost:4001/jekyll/update/2022/06/10/intro-to-project.html" rel="alternate" type="text/html" title="New AuxReaders! But why?" /><published>2022-06-10T12:00:00+01:00</published><updated>2022-06-10T12:00:00+01:00</updated><id>http://localhost:4001/jekyll/update/2022/06/10/intro-to-project</id><content type="html" xml:base="http://localhost:4001/jekyll/update/2022/06/10/intro-to-project.html">&lt;h1 id=&quot;introduction&quot;&gt;Introduction&lt;/h1&gt;
+
+&lt;p&gt;Has this ever happened to you? You run an MD simulation with your favourite MD
+engine, and you want to make sure the system actually has equilibrated properly
+as part of the analysis. In order to inspect the related energy terms, you have
+a few hoops to jump through. Depending on your engine of choice you might have to
+use a program to extract terms from a binary file, or you might have plain text
+file of some formatting or another to deal with. Either way, you will likely have
+to write the terms you are interested in to a new file before you can actually work
+with them, and you’ll have to alt-tab out of your Jupyter Notebook / IDE / what have you.
+This may only be mildly annoying, but because it is such a frequent occurence,
+even small inefficiencies add up.&lt;/p&gt;
+
+&lt;p&gt;In my &lt;a href=&quot;https://summerofcode.withgoogle.com/proposals/details/iYc3bcfl&quot;&gt;GSoC project&lt;/a&gt;,
+I will write readers for such energy files and implement them
+as part of &lt;a href=&quot;https://www.mdanalysis.org&quot;&gt;MDAnalysis’&lt;/a&gt; framework for handling
+&lt;a href=&quot;https://userguide.mdanalysis.org/stable/formats/auxiliary.html&quot;&gt;auxiliary data.&lt;/a&gt;
+This framework was developed to allow the association of non-trajectory timeseries data
+with the frames of a trajectory. One of the key features of the AuxReaders is their
+ability to associate auxiliary data with trajectory timesteps when the trajectory data
+and the auxiliary data are written with different frequency. If the auxiliary data is
+saved, say, half or twice as often, then the AuxReader intelligently assigns it to the
+closest trajectory frame. Currently, the XVG format that GROMACS
+uses for certain output, for example timeseries data of reaction coordinates in
+umbrella sampling or steered MD simulations, is supported.&lt;/p&gt;
+
+&lt;p&gt;The new energy readers I will work on this summer will make use of this
+framework. Thus, they will not only make inspecting and evaluating energy terms
+more convenient, but will also open the door to new ways of utilising energy
+data in analysis.&lt;/p&gt;
+
+&lt;h1 id=&quot;concept&quot;&gt;Concept&lt;/h1&gt;
+&lt;p&gt;The following bits of pseudocode highlight how a new AuxReader for GROMACS EDR files
+would work.&lt;/p&gt;
+
+&lt;p&gt;Data would be read from files in the same way that the current XVGReader works.&lt;/p&gt;
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;aux&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;MDAnalysis&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;auxiliary&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;EDR&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;EDRReader&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;ener.edr&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;EDR files contain many energy terms, though, where XVG files usually have one data column.
+The EDRReader would therefore need to know which data is saved in the energy file.
+This information is stored in an attribute.&lt;/p&gt;
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;aux&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;terms&lt;/span&gt;
+&lt;span class=&quot;c1&quot;&gt;# Contains a list of all energy terms found in the file
+&lt;/span&gt;&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;Because many terms are present in the files, the method for adding auxdata
+to trajectories has to be changed slighly. In addition to providing a name for the
+aux attribute, users also specify which of the energy terms to add.&lt;/p&gt;
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;u&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;mda&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;Universe&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;foo&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;bar&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;trajectory&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;add_auxiliary&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;auxname&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;epot&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;auxterm&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Potential&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;auxdata&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;aux&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;It will also be possible to add multiple or even all terms found in the file at
+the same time.&lt;/p&gt;
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;
+&lt;span class=&quot;n&quot;&gt;u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;trajectory&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;add_auxiliary&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;auxname&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;epot&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;temp&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+                           &lt;span class=&quot;n&quot;&gt;auxterm&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Potential&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Temperature&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;],&lt;/span&gt;
+                           &lt;span class=&quot;n&quot;&gt;auxdata&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;aux&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;trajectory&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;add_auxiliary&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;auxterm&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;aux&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;terms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;auxdata&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;aux&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Having associated the data with the trajectory, some further analyses become much
+easier. It will be very simple, for example, to select subsets of trajectories
+based on energy data. For example, to select only those frames of a trajectory
+below a certain potential energy threshold:&lt;/p&gt;
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;selected_frames&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;np&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;array&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;
+    &lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;frame&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;for&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ts&lt;/span&gt; &lt;span class=&quot;ow&quot;&gt;in&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;trajectory&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;if&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;ts&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;aux&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;epot&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;&amp;lt;&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;some_threshold&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;This array of frames can then be used for trajectory slicing.&lt;/p&gt;
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;subset&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;u&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;trajectory&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;[&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;selected_frames&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;]&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Should a user not be interested in such functionality, the energy readers can
+also be used to merely “unpack” selected energy terms for plotting.&lt;/p&gt;
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;n&quot;&gt;epot&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;aux&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;unpack&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Potential&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;bond_terms&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;angle_terms&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;aux&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;unpack&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;([&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;Bond&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;Angle&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;])&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Having written a few energy readers, I want to compile the lessons I will have learned
+doing to into a clear, easy-to-follow tutorial on how to write new AuxReaders to facilitate
+further development of this useful but underutilised system (It was first implemented
+6 years ago, and only now will new formats be supported).&lt;/p&gt;
+
+&lt;h1 id=&quot;strategy&quot;&gt;&lt;a href=&quot;https://github.com/MDAnalysis/mdanalysis/issues/3714&quot;&gt;Strategy&lt;/a&gt;&lt;/h1&gt;
+&lt;p&gt;To start this project off, I will work on the implementation of an
+&lt;a href=&quot;https://github.com/MDAnalysis/mdanalysis/issues/3629&quot;&gt;AuxReader for GROMACS’ EDR format&lt;/a&gt; for the
+selfish reason that GROMACS is the engine I use in my work the most.
+&lt;a href=&quot;https://github.com/jbarnoud&quot;&gt;JBarnoud’s&lt;/a&gt; &lt;a href=&quot;https://github.com/MDAnalysis/panedr&quot;&gt;panedr&lt;/a&gt;
+will be crucial for this work. It is a Python package that can read the binary EDR files and
+return their content as Pandas DataFrames. It works perfectly with all recent versions
+of GROMACS, but Pandas as a dependency should not be introduced to MDAnalysis. My
+first task will therefore be a minor rework of panedr so that it returns the energy data
+as a dictionary of arrays instead of a DataFrame. Once that is done, I can start working
+on a new AuxReader for EDR data that uses the modified panedr and the AuxReader base class
+to make the energy data available within MDAnalysis. This will be accompanied by
+rigorous documentation and test writing.&lt;/p&gt;
+
+&lt;p&gt;In general, two main groups of tests will be needed for the energy readers. For one,
+the actual parsing of the energy files has to be tested to make sure the files are
+read properly. Secondly, the association of the correct data with the appropriate
+trajectory time steps has to be verified.&lt;/p&gt;
+
+&lt;p&gt;After finishing work on the EDRReader, I will move on to different MD engines. The
+next priority will be either Amber or NAMD. Both of these write energy data to
+plain text files, and I can look to a large number of other parsers in MDAnalysis
+for inspiration of how to tackle them. I will originally limit myself to one of the formats,
+with the option of coming back to work on the other one if I still have time towards
+the end of the summer. The reason for this is that these formats are quite similar,
+and I ideally want to implement a number of different things.&lt;/p&gt;
+
+&lt;p&gt;Next on my list is an AuxReader not for energy data, but instead a general reader
+for NumPy arrays. Such a reader would be very interesting because it would greatly
+increase the flexibility of the aux module, allowing users to associate any data
+of their choice with their trajectories. As an example, users could link the
+results of Analysis objects like RMSD values to the timesteps.&lt;/p&gt;
+
+&lt;p&gt;Lastly, it would be great to have a CSV reader, as well. This would add yet more
+flexibility on one hand, and on the other hand provide a way for OpenMM’s energy
+data as generated by &lt;a href=&quot;http://docs.openmm.org/7.0.0/api-python/generated/simtk.openmm.app.statedatareporter.StateDataReporter.html&quot;&gt;StateDataReporters&lt;/a&gt;
+to be read.&lt;/p&gt;
+
+&lt;p&gt;And finally, as mentioned above, the experience I will have gained in implementing
+these AuxReaders should be very helpful in writing detailed documentation and a guide
+on how to write additional AuxReaders, helping to make the aux system find more use.&lt;/p&gt;
+
+&lt;h1 id=&quot;timeline&quot;&gt;timeline&lt;/h1&gt;
+&lt;p&gt;I will be working part-time on this project for a duration of 14 weeks. At the end
+of week 6, so roughly in mid- to late-July, I hope to have finished all work on the
+EDRReader. Every reader after this one should take less work, and I should be faster, so
+that a reader for Amber or NAMD will hopefully be finished by week 9 in mid-August.
+This is the bare minimum of what I want to achieve before I start my work on the
+guide and documentation, which I will do as the last task before my final submission
+deadline on the 26th of September. Depending on how much time I will have left then, I will hopefully
+be able to also include the NumPy Reader, the CSV/OpenMM Reader, and the NAMD or Amber
+reader, before I start work on the guide.&lt;/p&gt;
+
+&lt;p&gt;I am very much looking forward to properly getting started next week! Stay tuned
+for the next post on my progress with the EDRReader in a few weeks.&lt;/p&gt;</content><author><name></name></author><category term="jekyll" /><category term="update" /><summary type="html">Introduction</summary></entry><entry><title type="html">Welcome!</title><link href="http://localhost:4001/jekyll/update/2022/05/26/welcome-to-blog.html" rel="alternate" type="text/html" title="Welcome!" /><published>2022-05-26T16:00:00+01:00</published><updated>2022-05-26T16:00:00+01:00</updated><id>http://localhost:4001/jekyll/update/2022/05/26/welcome-to-blog</id><content type="html" xml:base="http://localhost:4001/jekyll/update/2022/05/26/welcome-to-blog.html">&lt;p&gt;Hello and welcome to my blog!&lt;/p&gt;
 
 &lt;p&gt;Here, I will post regular reports on my Google Summer of Code project with MDAnalysis. I am very excited that my project was chosen, and very much looking forward to getting started.&lt;/p&gt;
 
