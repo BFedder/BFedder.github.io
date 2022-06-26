@@ -1,4 +1,104 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="http://localhost:4001/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4001/" rel="alternate" type="text/html" /><updated>2022-06-10T20:42:43+01:00</updated><id>http://localhost:4001/feed.xml</id><title type="html">Bjarne’s blog</title><subtitle>This blog is a chronicle of my contribution to MDAnalysis as part of the Google Summer of Code 2022.</subtitle><entry><title type="html">New AuxReaders! But why?</title><link href="http://localhost:4001/jekyll/update/2022/06/10/intro-to-project.html" rel="alternate" type="text/html" title="New AuxReaders! But why?" /><published>2022-06-10T12:00:00+01:00</published><updated>2022-06-10T12:00:00+01:00</updated><id>http://localhost:4001/jekyll/update/2022/06/10/intro-to-project</id><content type="html" xml:base="http://localhost:4001/jekyll/update/2022/06/10/intro-to-project.html">&lt;h1 id=&quot;introduction&quot;&gt;Introduction&lt;/h1&gt;
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" ><generator uri="https://jekyllrb.com/" version="3.9.0">Jekyll</generator><link href="http://localhost:4001/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4001/" rel="alternate" type="text/html" /><updated>2022-06-26T19:02:20+01:00</updated><id>http://localhost:4001/feed.xml</id><title type="html">Bjarne’s blog</title><subtitle>This blog is a chronicle of my contribution to MDAnalysis as part of the Google Summer of Code 2022.</subtitle><entry><title type="html">First Things First</title><link href="http://localhost:4001/jekyll/update/2022/06/26/panedr.html" rel="alternate" type="text/html" title="First Things First" /><published>2022-06-26T12:00:00+01:00</published><updated>2022-06-26T12:00:00+01:00</updated><id>http://localhost:4001/jekyll/update/2022/06/26/panedr</id><content type="html" xml:base="http://localhost:4001/jekyll/update/2022/06/26/panedr.html">&lt;p&gt;As I mentioned in my last blog post, the first step in my GSoC project is a minor
+rewrite of &lt;a href=&quot;https://github.com/MDAnalysis/panedr&quot;&gt;panedr&lt;/a&gt; to make pandas an
+optional dependency, as the amount of mandatory dependencies to MDAnalysis should
+be kept as small as possible. In today’s blog post, I’ll report about my progress
+in this endeavour, and mention a number of the things I have learned in the process.&lt;/p&gt;
+
+&lt;h1 id=&quot;automated-testing-with-github-actions&quot;&gt;Automated Testing with GitHub Actions&lt;/h1&gt;
+&lt;p&gt;Before starting work on the actual code, we wanted to change the continuous integration
+workflow. In particular, we wanted to make the switch from Travis CI to GitHub Actions.
+On my part, this involved creating a .yml file at panedr/.github/workflows/gh-ci.yaml
+as part of &lt;a href=&quot;https://github.com/MDAnalysis/panedr/pull/32&quot;&gt;PR #32&lt;/a&gt;. I am happy to report
+that this worked out of the gate, and every commit on pull requests is now tested in
+GH Actions. Also, badges on the repository’s front page now inform the user of the passing
+tests and a respectable 82 % test coverage, with most misses happening because
+only the most recent file format (used for over 15 years at this point) is currently tested.&lt;/p&gt;
+
+&lt;h1 id=&quot;managing-dependencies&quot;&gt;Managing Dependencies&lt;/h1&gt;
+&lt;p&gt;The goal of this work is to have the functionality of &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;panedr&lt;/code&gt; available to use without
+the requirement of installing pandas. Initially, I changed the package in such a way
+that pandas was an optional dependency that could be installed along panedr like so:&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;python &lt;span class=&quot;nt&quot;&gt;-m&lt;/span&gt; pip &lt;span class=&quot;nb&quot;&gt;install &lt;/span&gt;panedr[pandas]
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;, where ommitting the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;[pandas]&lt;/code&gt; would install panedr without it. However, as
+discussed in more detail in &lt;a href=&quot;https://github.com/MDAnalysis/panedr/issues/34&quot;&gt;#34&lt;/a&gt;,
+this would be a breaking change to the way panedr currently works. Instead, my current
+goal is to have two packages in the repository, &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;panedrlite&lt;/code&gt; and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;panedr&lt;/code&gt;. All of the
+code will be part of &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;panedrlite&lt;/code&gt;. &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;panedr&lt;/code&gt; will be a metapackage, with &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;panedrlite[pandas]&lt;/code&gt;
+as one of its dependencies. This way, users can still install and import panedr just
+as they can now, and MDAnalysis can include panedrlite without pandas.
+The dependencies of panedr are managed in &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;requirements.txt&lt;/code&gt; and &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;setup.cfg&lt;/code&gt;, and these files
+have been changed / will be changed according to these new specifications. One addition
+to the requirements is NumPy, which is now installed with the same requirements that
+MDAnalysis specifies.&lt;/p&gt;
+
+&lt;h1 id=&quot;refactoring-the-panedr-code&quot;&gt;Refactoring the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;panedr&lt;/code&gt; Code&lt;/h1&gt;
+&lt;p&gt;The other steps described in this blog post are more (learning about) package
+management than coding. This is the Summer of Code, however, so now I’ll talk about
+the changes to the panedr code that I have made thus far.&lt;/p&gt;
+
+&lt;p&gt;GROMACS writes EDR files according to the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;eXternal Data Representation (XDR)&lt;/code&gt;
+protocol. Under the hood, panedr uses the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;xdrlib&lt;/code&gt; Python package to decode the
+binary files.&lt;/p&gt;
+
+&lt;p&gt;When the user calles the &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;edr_to_df()&lt;/code&gt; function, an EDRFile object is created.
+During object instantiation, the EDR file passed to &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;edr_to_df&lt;/code&gt; is read and the
+binary content passed to an instance of &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;GMX_Unpacker&lt;/code&gt;, which inherits from xdrlib’s Unpacker.
+Next, the first few bytes of the binary files are read. They contain information
+on the file version, precision (single or double), and which energy terms are present
+in the file. After initialisation, the file is read iteratively, and the energy
+values of each frame are stored in a nested list.&lt;/p&gt;
+
+&lt;p&gt;Once the last byte is read, the iteration stops. &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;edr_to_df&lt;/code&gt; then returns the nested
+list as a pandas dataframe.&lt;/p&gt;
+
+&lt;p&gt;Luckily, this setup lends itself well to refactoring. Pandas is only used in the very
+last step, after the file has been read in its entirety. In &lt;a href=&quot;https://github.com/MDAnalysis/panedr/pull/33&quot;&gt;PR #33&lt;/a&gt;,
+I’ve been working on just this.&lt;/p&gt;
+
+&lt;p&gt;To make panedr functional without pandas, I moved the parsing of the file to a new
+function &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;read_edr()&lt;/code&gt;. This function returns the nested lists that contain the energy values
+for each frame.
+&lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;edr_to_df()&lt;/code&gt; then just has to call &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;read_edr()&lt;/code&gt; and assemble its return values
+into the dataframe. The function can also check whether pandas is installed in a try-except statement.&lt;/p&gt;
+
+&lt;p&gt;Another new function contains the functionality that I want to use for my auxiliary
+reader in MDAnalysis: &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;edr_to_dict()&lt;/code&gt; takes the nested lists that &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;read_edr()&lt;/code&gt;
+returns and assembles them into a dictionary of NumPy arrays. This data structure
+will be straightforward to work with further downstream.&lt;/p&gt;
+
+&lt;p&gt;I have also written a test for &lt;code class=&quot;language-plaintext highlighter-rouge&quot;&gt;edr_to_dict()&lt;/code&gt;. The test compares
+the dictionary to the dataframe, and because these two are the same, we can
+be confident that the function is indeed working as intended.&lt;/p&gt;
+
+&lt;h1 id=&quot;lessons-learned&quot;&gt;Lessons Learned&lt;/h1&gt;
+&lt;p&gt;In the last two weeks, I have learned quite a lot, including:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;more details on what actually makes a Python package&lt;/li&gt;
+  &lt;li&gt;how to manage dependencies of packages&lt;/li&gt;
+  &lt;li&gt;how to make packages installable&lt;/li&gt;
+  &lt;li&gt;CI workflows in GitHub actions&lt;/li&gt;
+  &lt;li&gt;What the XDR protocol is and how it is read&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;Also: I already knew this, of course, but I was once again reminded that tasks often
+take much longer than I anticipate before starting out.&lt;/p&gt;
+
+&lt;p&gt;While improving my understanding of Python packaging was and is certainly important, I am now
+looking forward to wrapping up this part of the project and moving on to the implementation
+in MDAnalysis.&lt;/p&gt;
+
+&lt;h1 id=&quot;future-goals&quot;&gt;Future Goals&lt;/h1&gt;
+&lt;p&gt;The immediate next steps are still concerning the panedr package:&lt;/p&gt;
+&lt;ul&gt;
+  &lt;li&gt;Set up the panedr metapackage and panedrlite which holds the code&lt;/li&gt;
+  &lt;li&gt;Get &lt;a href=&quot;https://github.com/MDAnalysis/panedr/pull/33&quot;&gt;PR #33&lt;/a&gt; merged to get panedr-lite
+ready for inclusion in MDAnalysis&lt;/li&gt;
+  &lt;li&gt;Write documentation for the new functions&lt;/li&gt;
+&lt;/ul&gt;
+
+&lt;p&gt;I am hoping to finish this work over the next week, so I can then use panedr-lite
+in MDAnalysis and get started on the EDRReader in earnest.&lt;/p&gt;</content><author><name></name></author><category term="jekyll" /><category term="update" /><summary type="html">As I mentioned in my last blog post, the first step in my GSoC project is a minor rewrite of panedr to make pandas an optional dependency, as the amount of mandatory dependencies to MDAnalysis should be kept as small as possible. In today’s blog post, I’ll report about my progress in this endeavour, and mention a number of the things I have learned in the process.</summary></entry><entry><title type="html">New AuxReaders! But why?</title><link href="http://localhost:4001/jekyll/update/2022/06/10/intro-to-project.html" rel="alternate" type="text/html" title="New AuxReaders! But why?" /><published>2022-06-10T12:00:00+01:00</published><updated>2022-06-10T12:00:00+01:00</updated><id>http://localhost:4001/jekyll/update/2022/06/10/intro-to-project</id><content type="html" xml:base="http://localhost:4001/jekyll/update/2022/06/10/intro-to-project.html">&lt;h1 id=&quot;introduction&quot;&gt;Introduction&lt;/h1&gt;
 
 &lt;p&gt;Has this ever happened to you? You run an MD simulation with your favourite MD
 engine, and you want to make sure the system actually has equilibrated properly

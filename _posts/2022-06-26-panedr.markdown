@@ -1,0 +1,112 @@
+---
+layout: post
+title:  "First Things First"
+date:   2022-06-26 12:00:00 +0100
+categories: jekyll update
+---
+
+
+As I mentioned in my last blog post, the first step in my GSoC project is a minor
+rewrite of [panedr](https://github.com/MDAnalysis/panedr) to make pandas an
+optional dependency, as the amount of mandatory dependencies to MDAnalysis should
+be kept as small as possible. In today's blog post, I'll report about my progress
+in this endeavour, and mention a number of the things I have learned in the process.
+
+
+# Automated Testing with GitHub Actions
+Before starting work on the actual code, we wanted to change the continuous integration
+workflow. In particular, we wanted to make the switch from Travis CI to GitHub Actions.
+On my part, this involved creating a .yml file at panedr/.github/workflows/gh-ci.yaml
+as part of [PR #32](https://github.com/MDAnalysis/panedr/pull/32). I am happy to report
+that this worked out of the gate, and every commit on pull requests is now tested in
+GH Actions. Also, badges on the repository's front page now inform the user of the passing
+tests and a respectable 82 % test coverage, with most misses happening because
+only the most recent file format (used for over 15 years at this point) is currently tested.
+
+
+
+
+# Managing Dependencies
+The goal of this work is to have the functionality of `panedr` available to use without
+the requirement of installing pandas. Initially, I changed the package in such a way
+that pandas was an optional dependency that could be installed along panedr like so:
+```bash
+python -m pip install panedr[pandas]
+```
+, where ommitting the `[pandas]` would install panedr without it. However, as
+discussed in more detail in [#34](https://github.com/MDAnalysis/panedr/issues/34),
+this would be a breaking change to the way panedr currently works. Instead, my current
+goal is to have two packages in the repository, `panedrlite` and `panedr`. All of the
+code will be part of `panedrlite`. `panedr` will be a metapackage, with `panedrlite[pandas]`
+as one of its dependencies. This way, users can still install and import panedr just
+as they can now, and MDAnalysis can include panedrlite without pandas.
+The dependencies of panedr are managed in `requirements.txt` and `setup.cfg`, and these files
+have been changed / will be changed according to these new specifications. One addition
+to the requirements is NumPy, which is now installed with the same requirements that
+MDAnalysis specifies.
+
+
+
+# Refactoring the `panedr` Code
+The other steps described in this blog post are more (learning about) package
+management than coding. This is the Summer of Code, however, so now I'll talk about
+the changes to the panedr code that I have made thus far.
+
+GROMACS writes EDR files according to the `eXternal Data Representation (XDR)`
+protocol. Under the hood, panedr uses the `xdrlib` Python package to decode the
+binary files.
+
+When the user calles the `edr_to_df()` function, an EDRFile object is created.
+During object instantiation, the EDR file passed to `edr_to_df` is read and the
+binary content passed to an instance of `GMX_Unpacker`, which inherits from xdrlib's Unpacker.
+Next, the first few bytes of the binary files are read. They contain information
+on the file version, precision (single or double), and which energy terms are present
+in the file. After initialisation, the file is read iteratively, and the energy
+values of each frame are stored in a nested list.
+
+Once the last byte is read, the iteration stops. `edr_to_df` then returns the nested
+list as a pandas dataframe.
+
+Luckily, this setup lends itself well to refactoring. Pandas is only used in the very
+last step, after the file has been read in its entirety. In [PR #33](https://github.com/MDAnalysis/panedr/pull/33),
+I've been working on just this.
+
+To make panedr functional without pandas, I moved the parsing of the file to a new
+function `read_edr()`. This function returns the nested lists that contain the energy values
+for each frame.
+`edr_to_df()` then just has to call `read_edr()` and assemble its return values
+into the dataframe. The function can also check whether pandas is installed in a try-except statement.
+
+Another new function contains the functionality that I want to use for my auxiliary
+reader in MDAnalysis: `edr_to_dict()` takes the nested lists that `read_edr()`
+returns and assembles them into a dictionary of NumPy arrays. This data structure
+will be straightforward to work with further downstream.
+
+I have also written a test for `edr_to_dict()`. The test compares
+the dictionary to the dataframe, and because these two are the same, we can
+be confident that the function is indeed working as intended.
+
+# Lessons Learned
+In the last two weeks, I have learned quite a lot, including:
+* more details on what actually makes a Python package
+* how to manage dependencies of packages
+* how to make packages installable
+* CI workflows in GitHub actions
+* What the XDR protocol is and how it is read
+
+Also: I already knew this, of course, but I was once again reminded that tasks often
+take much longer than I anticipate before starting out.
+
+While improving my understanding of Python packaging was and is certainly important, I am now
+looking forward to wrapping up this part of the project and moving on to the implementation
+in MDAnalysis.
+
+# Future Goals
+The immediate next steps are still concerning the panedr package:
+* Set up the panedr metapackage and panedrlite which holds the code
+* Get [PR #33](https://github.com/MDAnalysis/panedr/pull/33) merged to get panedr-lite
+  ready for inclusion in MDAnalysis
+* Write documentation for the new functions
+
+I am hoping to finish this work over the next week, so I can then use panedr-lite
+in MDAnalysis and get started on the EDRReader in earnest.

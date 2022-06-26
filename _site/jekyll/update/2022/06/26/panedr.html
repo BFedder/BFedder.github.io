@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.7.1 -->
+<title>First Things First | Bjarne’s blog</title>
+<meta name="generator" content="Jekyll v3.9.0" />
+<meta property="og:title" content="First Things First" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="As I mentioned in my last blog post, the first step in my GSoC project is a minor rewrite of panedr to make pandas an optional dependency, as the amount of mandatory dependencies to MDAnalysis should be kept as small as possible. In today’s blog post, I’ll report about my progress in this endeavour, and mention a number of the things I have learned in the process." />
+<meta property="og:description" content="As I mentioned in my last blog post, the first step in my GSoC project is a minor rewrite of panedr to make pandas an optional dependency, as the amount of mandatory dependencies to MDAnalysis should be kept as small as possible. In today’s blog post, I’ll report about my progress in this endeavour, and mention a number of the things I have learned in the process." />
+<link rel="canonical" href="http://localhost:4001/jekyll/update/2022/06/26/panedr.html" />
+<meta property="og:url" content="http://localhost:4001/jekyll/update/2022/06/26/panedr.html" />
+<meta property="og:site_name" content="Bjarne’s blog" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2022-06-26T12:00:00+01:00" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="First Things First" />
+<script type="application/ld+json">
+{"@type":"BlogPosting","headline":"First Things First","dateModified":"2022-06-26T12:00:00+01:00","datePublished":"2022-06-26T12:00:00+01:00","url":"http://localhost:4001/jekyll/update/2022/06/26/panedr.html","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4001/jekyll/update/2022/06/26/panedr.html"},"description":"As I mentioned in my last blog post, the first step in my GSoC project is a minor rewrite of panedr to make pandas an optional dependency, as the amount of mandatory dependencies to MDAnalysis should be kept as small as possible. In today’s blog post, I’ll report about my progress in this endeavour, and mention a number of the things I have learned in the process.","@context":"https://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/main.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4001/feed.xml" title="Bjarne's blog" /></head>
+<body><header class="site-header" role="banner">
+
+  <div class="wrapper"><a class="site-title" rel="author" href="/">Bjarne&#39;s blog</a><nav class="site-nav">
+        <input type="checkbox" id="nav-trigger" class="nav-trigger" />
+        <label for="nav-trigger">
+          <span class="menu-icon">
+            <svg viewBox="0 0 18 15" width="18px" height="15px">
+              <path d="M18,1.484c0,0.82-0.665,1.484-1.484,1.484H1.484C0.665,2.969,0,2.304,0,1.484l0,0C0,0.665,0.665,0,1.484,0 h15.032C17.335,0,18,0.665,18,1.484L18,1.484z M18,7.516C18,8.335,17.335,9,16.516,9H1.484C0.665,9,0,8.335,0,7.516l0,0 c0-0.82,0.665-1.484,1.484-1.484h15.032C17.335,6.031,18,6.696,18,7.516L18,7.516z M18,13.516C18,14.335,17.335,15,16.516,15H1.484 C0.665,15,0,14.335,0,13.516l0,0c0-0.82,0.665-1.483,1.484-1.483h15.032C17.335,12.031,18,12.695,18,13.516L18,13.516z"/>
+            </svg>
+          </span>
+        </label>
+
+        <div class="trigger"><a class="page-link" href="/about/">About</a></div>
+      </nav></div>
+</header>
+<main class="page-content" aria-label="Content">
+      <div class="wrapper">
+        <article class="post h-entry" itemscope itemtype="http://schema.org/BlogPosting">
+
+  <header class="post-header">
+    <h1 class="post-title p-name" itemprop="name headline">First Things First</h1>
+    <p class="post-meta">
+      <time class="dt-published" datetime="2022-06-26T12:00:00+01:00" itemprop="datePublished">Jun 26, 2022
+      </time></p>
+  </header>
+
+  <div class="post-content e-content" itemprop="articleBody">
+    <p>As I mentioned in my last blog post, the first step in my GSoC project is a minor
+rewrite of <a href="https://github.com/MDAnalysis/panedr">panedr</a> to make pandas an
+optional dependency, as the amount of mandatory dependencies to MDAnalysis should
+be kept as small as possible. In today’s blog post, I’ll report about my progress
+in this endeavour, and mention a number of the things I have learned in the process.</p>
+
+<h1 id="automated-testing-with-github-actions">Automated Testing with GitHub Actions</h1>
+<p>Before starting work on the actual code, we wanted to change the continuous integration
+workflow. In particular, we wanted to make the switch from Travis CI to GitHub Actions.
+On my part, this involved creating a .yml file at panedr/.github/workflows/gh-ci.yaml
+as part of <a href="https://github.com/MDAnalysis/panedr/pull/32">PR #32</a>. I am happy to report
+that this worked out of the gate, and every commit on pull requests is now tested in
+GH Actions. Also, badges on the repository’s front page now inform the user of the passing
+tests and a respectable 82 % test coverage, with most misses happening because
+only the most recent file format (used for over 15 years at this point) is currently tested.</p>
+
+<h1 id="managing-dependencies">Managing Dependencies</h1>
+<p>The goal of this work is to have the functionality of <code class="language-plaintext highlighter-rouge">panedr</code> available to use without
+the requirement of installing pandas. Initially, I changed the package in such a way
+that pandas was an optional dependency that could be installed along panedr like so:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python <span class="nt">-m</span> pip <span class="nb">install </span>panedr[pandas]
+</code></pre></div></div>
+<p>, where ommitting the <code class="language-plaintext highlighter-rouge">[pandas]</code> would install panedr without it. However, as
+discussed in more detail in <a href="https://github.com/MDAnalysis/panedr/issues/34">#34</a>,
+this would be a breaking change to the way panedr currently works. Instead, my current
+goal is to have two packages in the repository, <code class="language-plaintext highlighter-rouge">panedrlite</code> and <code class="language-plaintext highlighter-rouge">panedr</code>. All of the
+code will be part of <code class="language-plaintext highlighter-rouge">panedrlite</code>. <code class="language-plaintext highlighter-rouge">panedr</code> will be a metapackage, with <code class="language-plaintext highlighter-rouge">panedrlite[pandas]</code>
+as one of its dependencies. This way, users can still install and import panedr just
+as they can now, and MDAnalysis can include panedrlite without pandas.
+The dependencies of panedr are managed in <code class="language-plaintext highlighter-rouge">requirements.txt</code> and <code class="language-plaintext highlighter-rouge">setup.cfg</code>, and these files
+have been changed / will be changed according to these new specifications. One addition
+to the requirements is NumPy, which is now installed with the same requirements that
+MDAnalysis specifies.</p>
+
+<h1 id="refactoring-the-panedr-code">Refactoring the <code class="language-plaintext highlighter-rouge">panedr</code> Code</h1>
+<p>The other steps described in this blog post are more (learning about) package
+management than coding. This is the Summer of Code, however, so now I’ll talk about
+the changes to the panedr code that I have made thus far.</p>
+
+<p>GROMACS writes EDR files according to the <code class="language-plaintext highlighter-rouge">eXternal Data Representation (XDR)</code>
+protocol. Under the hood, panedr uses the <code class="language-plaintext highlighter-rouge">xdrlib</code> Python package to decode the
+binary files.</p>
+
+<p>When the user calles the <code class="language-plaintext highlighter-rouge">edr_to_df()</code> function, an EDRFile object is created.
+During object instantiation, the EDR file passed to <code class="language-plaintext highlighter-rouge">edr_to_df</code> is read and the
+binary content passed to an instance of <code class="language-plaintext highlighter-rouge">GMX_Unpacker</code>, which inherits from xdrlib’s Unpacker.
+Next, the first few bytes of the binary files are read. They contain information
+on the file version, precision (single or double), and which energy terms are present
+in the file. After initialisation, the file is read iteratively, and the energy
+values of each frame are stored in a nested list.</p>
+
+<p>Once the last byte is read, the iteration stops. <code class="language-plaintext highlighter-rouge">edr_to_df</code> then returns the nested
+list as a pandas dataframe.</p>
+
+<p>Luckily, this setup lends itself well to refactoring. Pandas is only used in the very
+last step, after the file has been read in its entirety. In <a href="https://github.com/MDAnalysis/panedr/pull/33">PR #33</a>,
+I’ve been working on just this.</p>
+
+<p>To make panedr functional without pandas, I moved the parsing of the file to a new
+function <code class="language-plaintext highlighter-rouge">read_edr()</code>. This function returns the nested lists that contain the energy values
+for each frame.
+<code class="language-plaintext highlighter-rouge">edr_to_df()</code> then just has to call <code class="language-plaintext highlighter-rouge">read_edr()</code> and assemble its return values
+into the dataframe. The function can also check whether pandas is installed in a try-except statement.</p>
+
+<p>Another new function contains the functionality that I want to use for my auxiliary
+reader in MDAnalysis: <code class="language-plaintext highlighter-rouge">edr_to_dict()</code> takes the nested lists that <code class="language-plaintext highlighter-rouge">read_edr()</code>
+returns and assembles them into a dictionary of NumPy arrays. This data structure
+will be straightforward to work with further downstream.</p>
+
+<p>I have also written a test for <code class="language-plaintext highlighter-rouge">edr_to_dict()</code>. The test compares
+the dictionary to the dataframe, and because these two are the same, we can
+be confident that the function is indeed working as intended.</p>
+
+<h1 id="lessons-learned">Lessons Learned</h1>
+<p>In the last two weeks, I have learned quite a lot, including:</p>
+<ul>
+  <li>more details on what actually makes a Python package</li>
+  <li>how to manage dependencies of packages</li>
+  <li>how to make packages installable</li>
+  <li>CI workflows in GitHub actions</li>
+  <li>What the XDR protocol is and how it is read</li>
+</ul>
+
+<p>Also: I already knew this, of course, but I was once again reminded that tasks often
+take much longer than I anticipate before starting out.</p>
+
+<p>While improving my understanding of Python packaging was and is certainly important, I am now
+looking forward to wrapping up this part of the project and moving on to the implementation
+in MDAnalysis.</p>
+
+<h1 id="future-goals">Future Goals</h1>
+<p>The immediate next steps are still concerning the panedr package:</p>
+<ul>
+  <li>Set up the panedr metapackage and panedrlite which holds the code</li>
+  <li>Get <a href="https://github.com/MDAnalysis/panedr/pull/33">PR #33</a> merged to get panedr-lite
+ready for inclusion in MDAnalysis</li>
+  <li>Write documentation for the new functions</li>
+</ul>
+
+<p>I am hoping to finish this work over the next week, so I can then use panedr-lite
+in MDAnalysis and get started on the EDRReader in earnest.</p>
+
+  </div><a class="u-url" href="/jekyll/update/2022/06/26/panedr.html" hidden></a>
+</article>
+
+      </div>
+    </main><footer class="site-footer h-card">
+  <data class="u-url" href="/"></data>
+
+  <div class="wrapper">
+
+    <h2 class="footer-heading">Bjarne&#39;s blog</h2>
+
+    <div class="footer-col-wrapper">
+      <div class="footer-col footer-col-1">
+        <ul class="contact-list">
+          <li class="p-name">Bjarne&#39;s blog</li><li><a class="u-email" href="mailto:bjarnefeddersen@gmx.net">bjarnefeddersen@gmx.net</a></li></ul>
+      </div>
+
+      <div class="footer-col footer-col-2"><ul class="social-media-list"><li><a href="https://github.com/bfedder"><svg class="svg-icon"><use xlink:href="/assets/minima-social-icons.svg#github"></use></svg> <span class="username">bfedder</span></a></li></ul>
+</div>
+
+      <div class="footer-col footer-col-3">
+        <p>This blog is a chronicle of my contribution to MDAnalysis as part of the Google Summer of Code 2022.</p>
+      </div>
+    </div>
+
+  </div>
+
+</footer>
+</body>
+
+</html>
