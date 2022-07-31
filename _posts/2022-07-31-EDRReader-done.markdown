@@ -1,6 +1,6 @@
 ---
 layout: post
-title:  "The EDRReader is done"
+title:  "The EDRReader is (almost) done"
 date:   2022-07-31 12:00:00 +0100
 categories: jekyll update
 ---
