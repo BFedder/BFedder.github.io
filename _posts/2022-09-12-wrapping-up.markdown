@@ -1,7 +1,7 @@
 ---
 layout: post
 title:  "Making Pyedr Optional"
-date:   2022-09-12 12:00:00 +0100
+date:   2022-09-12 10:00:00 +0100
 categories: jekyll update
 ---
 
