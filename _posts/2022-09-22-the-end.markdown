@@ -1,0 +1,72 @@
+---
+layout: post
+title:  "The End of GSoC"
+date:   2022-09-12 10:00:00 +0100
+categories: jekyll update
+---
+
+I cannot believe that it's already the end of GSoC. Over the last few months,
+I have expanded the auxiliary data framework of [MDAnalysis](https://www.mdanalysis.org),
+in the end mostly focussing on reading and working with the [GROMACS EDR file format](https://manual.gromacs.org/documentation/2016/user-guide/file-formats.html#energy-files).
+
+# Panedr and Pyedr
+In the beginning, I focussed on adapting the [panedr](https://github.com/MDAnalysis/panedr) python package for use in MDAnalysis.
+Some refactoring was needed so [pandas would not be introduced as a dependency in MDAnalysis](https://bfedder.github.io/jekyll/update/2022/06/26/panedr.html).
+This refactoring was done in [pull request # 33](https://github.com/MDAnalysis/panedr/pull/33), and led ultimately to
+a restructuring of panedr and the creation of a second Python package that does not rely on pandas
+(PRs [#42](https://github.com/MDAnalysis/panedr/pull/42) and [#50](https://github.com/MDAnalysis/panedr/pull/50)).
+As part of this work, I learned a lot about CI workflows ([#32](https://github.com/MDAnalysis/panedr/pull/32)) and package management ([#28](https://github.com/MDAnalysis/panedr/pull/28), [#36](https://github.com/MDAnalysis/panedr/pull/36), [#41](https://github.com/MDAnalysis/panedr/pull/41)).
+
+Finally, an additional function was added to also read the units of all energy terms found in the EDR file ([PR # 56](https://github.com/MDAnalysis/panedr/pull/56)).
+
+As a direct outcome of this GSoC project, the Pyedr python package was created. It is available
+on PyPI and exposes the `edr_to_dict` and `get_unit_dictionary` functions. The former reads
+the whole EDR file and returns the data stored in it as a dictionary mapping the names given by GROMACS to
+NumPy arrays that hold the data. The latter reads the unit information from the EDR file and maps GROMACS-given
+names to strings of unit names. Pyedr is the basis of the [EDRReader in MDAnalysis](https://docs.mdanalysis.org/2.4.0-dev0/documentation_pages/auxiliary/EDR.html), which I wrote as the next step of my GSoC project.
+
+
+# EDRReader
+The [code for the EDRReader](https://github.com/MDAnalysis/mdanalysis/pull/3749) is the largest code contribution I have made to date.
+While working on the reader, it quickly became apparent that the auxiliary API would need to be changed to accommodate
+the large number of terms found in EDR files. While the [XVGReader](https://docs.mdanalysis.org/stable/documentation_pages/auxiliary/XVG.html) still works as previously, the new base case for adding auxiliary data assumes a dictionary to be passed. The dictionary maps the name to be used in MDAnalysis to the names read from the EDR file. This is shown in the following minimal working example:
+
+```python
+import MDAnalysis as mda
+from MDAnalysisTests.datafiles import AUX_EDR, AUX_EDR_TPR, AUX_EDR_XTC
+term_dict = {"temp": "Temperature", "epot": "Potential"}
+aux = mda.auxiliary.EDR.EDRReader(AUX_EDR)
+u = mda.Universe(AUX_EDR_TPR, AUX_EDR_XTC)
+u.trajectory.add_auxiliary(term_dict, aux)
+```
+
+Aside from this API change, the EDRReader can do everything the XVGReader can. In addition to that, it
+has some new functionality.
+* Because EDR files can become reasonably large, a memory warning will be issued when more than a gigabyte of storage is used by the auxiliary data. This default value of 1 GB can be changed by passing a value as `memory_limit` when creating the EDRReader object.
+* EDR files store data of a large number of different quantities, so it is important to know their units as well. The EDRReader therefore has a `unit_dict` attribute that contains this information. By default, units found in the EDR file will be converted to [MDAnalysis base units](https://docs.mdanalysis.org/stable/documentation_pages/units.html#id68) on reading. This can be disabled by setting `convert_units` to False on creation of the reader.
+* In addition to associating data with trajectories, the EDRReader can also return the NumPy arrays of selected data, which is useful for plotting, for example. This is done via the EDRReader's `get_data` method.
+
+
+I have explained the EDRReader's functionality in more detail in the [MDAnalysis User Guide](https://userguide.mdanalysis.org/stable/formats/auxiliary.html#edr-files)
+
+
+# Ongoing discussions
+During this work, a few issues were raised. Two of these sparked discussions that are ongoing.
+
+With the expansion of auxiliary readers, MDAnalysis now encounters a more diverese set of units. This started a discussion on unit handling in general ([Issue #3792](https://github.com/MDAnalysis/mdanalysis/issues/3792)). Because of this complication, we are now discussing whether a unit management system like [pint](https://pint.readthedocs.io/en/stable/) should be adapted for use in MDAnalysis.
+
+
+With the introduction of the EDRReader, a new internal data structure for AuxReaders was needed. Where previously auxiliary data was stored in a plain NumPy array, now it was stored in a dictionary of NumPy arrays. This required a change to a method for calculating average values. This method now supports both cases, but if future readers need their own internal data structure as well, this will quickly become unsustainable. Therefore, [Issue #3830](https://github.com/MDAnalysis/mdanalysis/issues/3830) contains a discussion of where to define this method - in the base class or in the individual readers.
+
+
+# NumPy Reader
+I was unfortunately unable to complete the NumPy reader. Work on it has started, however, and can be found in [PR #3853](https://github.com/MDAnalysis/mdanalysis/pull/3853). I will continue work on this after GSoC ends.
+
+# Outcome:
+Pyedr and the EDRReader are now available to make the life of GROMACS users easier. I will keep working on MDAnalysis in general and the AuxReaders specifically, with the NumPy reader as my next work
+
+# Lessons learned during GSoC
+Participating in the Summer of Code was a great opportunity for me. I learned a lot, from small things like individual code patterns to larger points concerning overall best practices, the value of test-driven development, and package management. Also, because I worked on GSoC part-time alongside my PhD work, my time management was challenged and improved as a result. Overall, both my coding and my confidence in my coding have gotten much better this summer.
+
+# Conclusion
+I am very glad to have had the opportunity to contribute to MDAnalysis, which I use for my PhD every day. This made for a great synergy between my different projects this summer. I sincerely want to thank my mentors for all their advice, feedback, and support. I look forward to working with you in the future!
