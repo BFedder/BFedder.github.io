@@ -1,13 +1,22 @@
 ---
 layout: post
-title:  "The End of GSoC"
-date:   2022-09-12 10:00:00 +0100
+title:  "The End of GSoC: How I Added Energy Reading to MDAnalysis"
+date:   2022-09-22 10:00:00 +0100
 categories: jekyll update
 ---
 
 I cannot believe that it's already the end of GSoC. Over the last few months,
 I have expanded the auxiliary data framework of [MDAnalysis](https://www.mdanalysis.org),
 in the end mostly focussing on reading and working with the [GROMACS EDR file format](https://manual.gromacs.org/documentation/2016/user-guide/file-formats.html#energy-files).
+
+# Motivation
+In molecular dynamics simulations, users frequently have to inspect energy-like terms such as potential or kinetic energy, temperature, or pressure. This is so common a task that even small inefficiencies add up. Currently, users have to create intermediate files from their MD simulation's output files to obtain plot-able data, and this quickly becomes cumbersome when multiple terms are to be inspected. Being able to read in the energy output files directly would make this more convenient.
+
+Therefore, I wanted to add readers for energy-type files (output files containing information on potential and kinetic energy, temperature, pressure, and other such terms) from a number of MD engines to the auxiliary module of MDAnalysis in this project. This would make quality control of MD simulations much more convenient, and allow users to analyse the energy data without the need for switching windows or writing intermediate files directly from within their scripts or jupyter notebooks.
+
+I wanted the new energy readers to be able to parse energy output files of different MD engines, for example [GROMACS](https://manual.gromacs.org/documentation/2016/user-guide/file-formats.html#energy-files), [Amber](https://ambermd.org/doc12/Amber20.pdf), [NAMD](https://www.ks.uiuc.edu/Training/Tutorials/namd/namd-tutorial-html/node27.html) or [OpenMM](http://docs.openmm.org/7.0.0/api-python/generated/simtk.openmm.app.statedatareporter.StateDataReporter.html), and return the data these files contain in a way that conducive to analysis, for example as NumPy arrays. I further wanted to make use of the [auxiliary data framework](https://userguide.mdanalysis.org/stable/formats/auxiliary.html) in MDAnalysis. This would allow the association of energy data with trajectory time steps, enabling further utilisation such as filtering of time steps by certain auxiliary data values.
+
+The ideal outcome of this project was the creation of several energy readers to make analyses easier and more convenient, while at the same time creating more interest in and use cases for the auxiliary readers.
 
 # Panedr and Pyedr
 In the beginning, I focussed on adapting the [panedr](https://github.com/MDAnalysis/panedr) python package for use in MDAnalysis.
@@ -19,8 +28,8 @@ As part of this work, I learned a lot about CI workflows ([#32](https://github.c
 
 Finally, an additional function was added to also read the units of all energy terms found in the EDR file ([PR # 56](https://github.com/MDAnalysis/panedr/pull/56)).
 
-As a direct outcome of this GSoC project, the Pyedr python package was created. It is available
-on PyPI and exposes the `edr_to_dict` and `get_unit_dictionary` functions. The former reads
+As a direct outcome of this GSoC project, the Pyedr python package was created. It is [available
+on PyPI](https://pypi.org/project/panedr/) and exposes the `edr_to_dict` and `get_unit_dictionary` functions. The former reads
 the whole EDR file and returns the data stored in it as a dictionary mapping the names given by GROMACS to
 NumPy arrays that hold the data. The latter reads the unit information from the EDR file and maps GROMACS-given
 names to strings of unit names. Pyedr is the basis of the [EDRReader in MDAnalysis](https://docs.mdanalysis.org/2.4.0-dev0/documentation_pages/auxiliary/EDR.html), which I wrote as the next step of my GSoC project.
@@ -49,9 +58,18 @@ has some new functionality.
 
 I have explained the EDRReader's functionality in more detail in the [MDAnalysis User Guide](https://userguide.mdanalysis.org/stable/formats/auxiliary.html#edr-files)
 
+# Challenges and Ongoing discussions
+Throughout the implementation, I had to ensure that the EDRReader itself is defined in a sensible, easy to understand way, while also maintaining backwards compatibility and not changing the behaviour of the [XVGReader](https://docs.mdanalysis.org/2.3.0/documentation_pages/auxiliary/XVG.html). I want to highlight one challenge in particular that I had to overcome to meet both of these goals.
 
-# Ongoing discussions
-During this work, a few issues were raised. Two of these sparked discussions that are ongoing.
+Auxiliary data is added to trajectories by calling
+```python
+u.trajectory.add_auxiliary(aux_spec, auxdata, **kwargs)
+```
+As described in [Issue #3811](https://github.com/MDAnalysis/mdanalysis/issues/3811), the expected way to specify that all data found in a file should be added would be to have `None` be the default value for aux_spec and not specify any term to be added. Only the AuxReader instance that holds the data needs to be named. However, making `aux_spec` optional causes a problem because `auxdata`, the AuxReader instance, is always needed. In Python, it is not possible to define optional function arguments before mandatory ones. Reversing the order in which `aux_spec` and `auxdata` are defined and expected would solve this problem, but this is a breaking change for the XVGReader. What I have done instead is make `auxdata` aund `aux_spec` be technically optional and default to `None`. This way, the XVGReader still works as previously, and users can add all data by not specifying `aux_spec` as expected, with the small caveat that they have to type `u.trajectory.add_auxiliary(auxdata=aux)` instead of `u.trajectory.add_auxiliary(aux)`.
+
+We have agreed that the order of function arguments will be changed. In line with semantic versioning, DeprecationWarnings of this breaking change will be raised in the next minor release, and in the 3.0.0 major release, the change will take place.
+
+During this work, a few further issues were raised. Two of these sparked discussions that are ongoing.
 
 With the expansion of auxiliary readers, MDAnalysis now encounters a more diverese set of units. This started a discussion on unit handling in general ([Issue #3792](https://github.com/MDAnalysis/mdanalysis/issues/3792)). Because of this complication, we are now discussing whether a unit management system like [pint](https://pint.readthedocs.io/en/stable/) should be adapted for use in MDAnalysis.
 
@@ -60,10 +78,14 @@ With the introduction of the EDRReader, a new internal data structure for AuxRea
 
 
 # NumPy Reader
-I was unfortunately unable to complete the NumPy reader. Work on it has started, however, and can be found in [PR #3853](https://github.com/MDAnalysis/mdanalysis/pull/3853). I will continue work on this after GSoC ends.
+While working on the project, the idea of an auxiliary reader to handle NumPy arrays occured to me. The plan I had to allow filtering of trajectory frames by auxiliary data values, I realised, really lent itself to be applied to the results of several of the analysis methods available through MDAnalysis. One application I pictured, for example, was that of a conformational change observed in MD simulations. Such a change can be monitored by calculating the RMSD of the atom positions, which MDAnalysis returns in the form of a NumPy array. By directly associating the RMSD values with trajectory timesteps, it is possible to select only sufficiently (dis-)similar structures.
+
+I therefore decided to make a NumPy reader my second priority after finishing the EDRReader, but unfortunately, I was unable to complete it. Work on it has started, however, and can be found in [PR #3853](https://github.com/MDAnalysis/mdanalysis/pull/3853). I will continue work on this after GSoC ends.
 
 # Outcome:
-Pyedr and the EDRReader are now available to make the life of GROMACS users easier. I will keep working on MDAnalysis in general and the AuxReaders specifically, with the NumPy reader as my next work
+[Pyedr](https://pypi.org/project/panedr/) and the [EDRReader](https://docs.mdanalysis.org/2.4.0-dev0/documentation_pages/auxiliary/EDR.html) are now available to make the life of GROMACS users easier. They allow users to more quickly and conveniently verify that their simulations are properly equilibrated without the writing of intermediate files. The [MDAnalysis User Guide](https://userguide.mdanalysis.org/stable/formats/auxiliary.html#edr-files) contains a step-by-step guide of how to use the EDRReader and explains the functionality it has.
+
+I will keep working on MDAnalysis in general and the AuxReaders specifically, with the NumPy reader as my next work
 
 # Lessons learned during GSoC
 Participating in the Summer of Code was a great opportunity for me. I learned a lot, from small things like individual code patterns to larger points concerning overall best practices, the value of test-driven development, and package management. Also, because I worked on GSoC part-time alongside my PhD work, my time management was challenged and improved as a result. Overall, both my coding and my confidence in my coding have gotten much better this summer.
