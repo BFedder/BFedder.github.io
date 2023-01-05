@@ -56,7 +56,7 @@ has some new functionality.
 * In addition to associating data with trajectories, the EDRReader can also return the NumPy arrays of selected data, which is useful for plotting, for example. This is done via the EDRReader's `get_data` method.
 
 
-I have explained the EDRReader's functionality in more detail in the [MDAnalysis User Guide](https://bfedder.github.io/userguide/formats/auxiliary.html#edr-files)
+I have explained the EDRReader's functionality in more detail in the [MDAnalysis User Guide](https://userguide.mdanalysis.org/2.4.1/formats/auxiliary.html#edr-files)
 
 # Challenges and Ongoing discussions
 Throughout the implementation, I had to ensure that the EDRReader itself is defined in a sensible, easy to understand way, while also maintaining backwards compatibility and not changing the behaviour of the [XVGReader](https://docs.mdanalysis.org/2.3.0/documentation_pages/auxiliary/XVG.html). I want to highlight one challenge in particular that I had to overcome to meet both of these goals.
@@ -83,7 +83,7 @@ While working on the project, the idea of an auxiliary reader to handle NumPy ar
 I therefore decided to make a NumPy reader my second priority after finishing the EDRReader, but unfortunately, I was unable to complete it. Work on it has started, however, and can be found in [PR #3853](https://github.com/MDAnalysis/mdanalysis/pull/3853). I will continue work on this after GSoC ends.
 
 # Outcome:
-[Pyedr](https://pypi.org/project/panedr/) and the [EDRReader](https://docs.mdanalysis.org/2.4.0-dev0/documentation_pages/auxiliary/EDR.html) are now available to make the life of GROMACS users easier. They allow users to more quickly and conveniently verify that their simulations are properly equilibrated without the writing of intermediate files. The [MDAnalysis User Guide](https://bfedder.github.io/userguide/formats/auxiliary.html#edr-files) contains a step-by-step guide of how to use the EDRReader and explains the functionality it has.
+[Pyedr](https://pypi.org/project/panedr/) and the [EDRReader](https://docs.mdanalysis.org/2.4.0-dev0/documentation_pages/auxiliary/EDR.html) are now available to make the life of GROMACS users easier. They allow users to more quickly and conveniently verify that their simulations are properly equilibrated without the writing of intermediate files. The [MDAnalysis User Guide](https://userguide.mdanalysis.org/2.4.1/formats/auxiliary.html#edr-files) contains a step-by-step guide of how to use the EDRReader and explains the functionality it has.
 
 I will keep working on MDAnalysis in general and the AuxReaders specifically, with the NumPy reader as my next work
 
